@@ -1,15 +1,33 @@
 import numpy as np
+import pyroomacoustics as pra
 
 
-def buildRoom(dimensions, source, mic_array):
+def build_room(dimensions, source, mic_array, rt60 ,fs):
     """
     This method wraps inside all the necessary steps
     to build the simulated room
-    :param array dimensions: length, width and height of the room
-    :param array source: contains the x, y, z location of the sound source
-    :param array mic_array: contains the x, y, z location of all the microphones
+    :param dimensions: length, width and height of the room
+    :param source: contains the x, y, z location of the sound source
+    :param mic_array: contains the x, y, z vectors of all the microphones
+    :param float rt60: represents the reverberation time of the room
+    :param int fs: represents the sampling frequency used for the generation of signals
     :return: pyroomacoustics object representing the room
     """
+    # We invert Sabine's formula to obtain the parameters for the ISM simulator
+    e_absorption, max_order = pra.inverse_sabine(rt60, dimensions)
+
+    # Building a 'Shoebox' room with the provided dimensions
+    room = pra.ShoeBox(p=dimensions, fs=fs, absorption=e_absorption, max_order= max_order)
+
+    # Place the Microphone Array and the Sound Source inside the room
+    mics = pra.MicrophoneArray(mic_array, fs)
+    room.add_microphone_array(mics)
+    room.add_source(source)
+
+    # Computing the Room Impulse Response at each microphone, for each source
+    room.image_source_model()
+    room.compute_rir()
+
     return room
 
 
