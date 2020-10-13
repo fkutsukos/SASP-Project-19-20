@@ -1,6 +1,15 @@
 import numpy as np
 
-def buildRoom(dimensions,source,mic_array):
+
+def buildRoom(dimensions, source, mic_array):
+    """
+    This method wraps inside all the necessary steps
+    to build the simulated room
+    :param array dimensions: length, width and height of the room
+    :param array source: contains the x, y, z location of the sound source
+    :param array mic_array: contains the x, y, z location of all the microphones
+    :return: pyroomacoustics object representing the room
+    """
     return room
 
 
