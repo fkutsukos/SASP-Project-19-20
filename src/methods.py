@@ -62,3 +62,4 @@ def echoLabeling(EDM,peaksArray):
 def trilateration(sortedEchoestoImageSources):
     # using Linear Least Squares
     # using System of Linear Equations
+    return 
