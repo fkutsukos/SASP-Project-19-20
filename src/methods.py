@@ -54,7 +54,7 @@ def build_edm(mic_locations):
     return D
 
 
-def echo_labeling(edm, mic_peaks, fs, c=343.0):
+def echo_labeling(edm, mic_peaks, k, fs, c=343.0):
     """
     This method evaluates if the matrix Daug, generated adding a row and
     a column made of the possible echo combinations squared to the
@@ -64,6 +64,7 @@ def echo_labeling(edm, mic_peaks, fs, c=343.0):
     between the different microphones.
     :param mic_peaks: list of arrays containing the indexes of the
     peaks found in the RIR captured by each microphone.
+    :param k: dimensionality of the space.
     :param fs: sampling frequency used in the RIRs measure.
     :param c: speed of sound (set to the default value of 343 m/s).
     :return: a list containing all the echo combinations that satisfy
@@ -94,7 +95,7 @@ def echo_labeling(edm, mic_peaks, fs, c=343.0):
         d_aug[-1, 0:-1] = echo ** 2
         print(d_aug)
         # In a k dimensional space, the rank cannot be greater than k + 2
-        if np.linalg.matrix_rank(d_aug) < 6:
+        if np.linalg.matrix_rank(d_aug) <= k + 2:
             print(np.linalg.matrix_rank(d_aug))
             echoes_match.append(echo)
     print(echoes_match)
