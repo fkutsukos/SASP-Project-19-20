@@ -102,7 +102,39 @@ def echo_labeling(edm, mic_peaks, k, fs, c=343.0):
     return echoes_match
 
 
-def trilateration(sortedEchoestoImageSources):
-    # using Linear Least Squares
-    # using System of Linear Equations
-    return
+def trilateration(mic_locations, distances):
+    """
+    This method uses a Trilateration algorithm to infer the position
+    of the virtual source corresponding to a set of measured echoes
+    using the location of the microphones and the distance between each
+    microphone and the virtual source (estimated from the RIRs).
+    :param mic_locations: contains the x, y, z vectors of all the microphones
+    :param distances: contains the distances between each microphone
+    and the virtual source to be estimated
+    :return: a list containing the x, y, z coordinates of the virtual source
+    """
+    # Trilateration using a Linearized System of Equations:
+    # Conventionally, we use the first mic as a reference point
+    reference_mic = mic_locations[:, 0]
+
+    # Instantiating the A matrix, which has a number of rows = n_mics - 1
+    # and a number of columns = n_dimensions
+    A = np.zeros(shape=(mic_locations.shape[1] - 1, len(mic_locations)))
+
+    # Building the A matrix
+    for i in range(len(reference_mic)):
+        for j in range(mic_locations.shape[1] - 1):
+            A[j, i] = mic_locations[i, j+1] - reference_mic[i]
+
+    # Instantiating the b vector, which has dimension = n_mics - 1
+    b = np.zeros(mic_locations.shape[1] - 1)
+
+    # Building the b vector
+    for i in range(mic_locations.shape[1] - 1):
+        b[i] = 0.5 * (distances[0]**2 - distances[i+1]**2 +
+                      np.linalg.norm(mic_locations[:, i+1] - reference_mic)**2)
+
+    # Solving the linear system through the Linear Least Squares approach
+    virtual_source_loc = np.linalg.pinv(A).dot(b) + reference_mic
+
+    return virtual_source_loc
