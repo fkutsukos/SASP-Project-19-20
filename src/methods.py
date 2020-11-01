@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import find_peaks
 import sympy as sp
 import pyroomacoustics as pra
 
@@ -32,8 +33,23 @@ def build_room(dimensions, source, mic_array, rt60, fs):
     return room
 
 
-def peakPicking(mic_rir, numberOfEchoes):
-    return peaksArray
+def peak_picking(mic_rirs, number_of_echoes, prominence=0.05, distance=5):
+    """
+    This method receives a list of microphone room impulse responses and extracts the location of the main peaks.
+    Impulse responses contain peaks that do not correspond to any wall.
+    These spurious peaks can be introduced by noise, non-linearities, and other imperfections in the measurement system.
+    :param mic_rirs: list of microphone room impulse responses
+    :param number_of_echoes: maximum number of peaks to identify, a good strategy is to select a number of peaks greater
+    than the number of walls and then to prune the selection.
+    :param prominence: required prominence of peaks.
+    :param distance: required minimal horizontal distance (>= 1) in samples between neighbouring peaks.
+    :return: list of arrays that contain the peak indexes
+    """
+    peak_indexes = []
+    for mic in range(len(mic_rirs)):
+        peaks, _ = find_peaks(mic_rirs[mic][0], prominence=prominence, distance=distance)
+        peak_indexes.append(peaks[0:number_of_echoes])
+    return peak_indexes
 
 
 def build_edm(mic_locations):
@@ -135,7 +151,7 @@ def trilateration(mic_locations, distances):
         b[i] = 0.5 * (distances[0] ** 2 - distances[i + 1] ** 2 +
                       np.linalg.norm(mic_locations[:, i + 1] - reference_mic) ** 2)
 
-    # Solving the linear system through the Linear Least Squares approach
+    # Solving the linear system through the Linear Least Squares (Moore-Penrose Pseudo-inverse) approach
     virtual_source_loc = np.linalg.pinv(A).dot(b) + reference_mic
 
     return virtual_source_loc
