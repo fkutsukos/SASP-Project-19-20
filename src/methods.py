@@ -189,7 +189,9 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
         for idx1 in range(i):
             for idx2 in range(i):
                 if idx1 != idx2 and not deleted[idx1] and not deleted[idx2]:
-                    if np.linalg.norm(combine(sorted_virtual_sources[j], sorted_virtual_sources[i])) < dist_thresh:
+                    if np.linalg.norm(
+                            combine(sorted_virtual_sources[idx1], sorted_virtual_sources[idx2]) - loudspeaker
+                    ) < dist_thresh:
                         deleted[i] = True
         # TODO finish the following method implementation:
         #       else if Plane(si) intersects the current room
