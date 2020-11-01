@@ -1,4 +1,5 @@
 import numpy as np
+import sympy as sp
 import pyroomacoustics as pra
 
 
@@ -150,8 +151,9 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
     virtual sources (it could contain even higher-order virtual sources)
     :param loudspeaker: x, y, z coordinates of the speaker location in the room
     :param dist_thresh: distance threshold (epsilon)
-    :return:
+    :return: list of planes corresponding to the first-order virtual sources
     """
+
     def combine(s1, s2):
         """
         This method combines the virtual sources s1 and s2 to generate a higher-order
@@ -176,11 +178,13 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
     # Computing the distances
     for source in candidate_virtual_sources:
         distances_from_speaker.append(np.linalg.norm(source - loudspeaker))
-    print(distances_from_speaker)
 
     # Re-ordering the list of virtual sources according to their distance from the loudspeaker
     distances_from_speaker = np.array(distances_from_speaker)
     sorted_virtual_sources = candidate_virtual_sources[distances_from_speaker.argsort()]
+
+    # Initialize the list of planes that constitutes the room
+    room = []
 
     # Initialize the boolean mask to identify the first-order virtual sources
     deleted = np.array([False] * len(sorted_virtual_sources), dtype=bool)
@@ -188,15 +192,35 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
     for i in range(len(sorted_virtual_sources)):
         for idx1 in range(i):
             for idx2 in range(i):
+                # The following two conditions verify if the current virtual source is a combination of lower order
+                # virtual sources: if so, it is deleted from the available candidates
                 if idx1 != idx2 and not deleted[idx1] and not deleted[idx2]:
                     if np.linalg.norm(
-                            combine(sorted_virtual_sources[idx1], sorted_virtual_sources[idx2]) - loudspeaker
+                            combine(
+                                sorted_virtual_sources[idx1], sorted_virtual_sources[idx2]
+                            ) - sorted_virtual_sources[i]
                     ) < dist_thresh:
                         deleted[i] = True
-        # TODO finish the following method implementation:
-        #       else if Plane(si) intersects the current room
-        #           add Plane(si) to the set of planes
-        #       else
-        #           deleted[i] = true
+                    # If the virtual source is not a combination of lower order virtual sources, the corresponding plane
+                    # is built and it is added to the room's walls list
+                    else:
+                        # pi is a point on the hypothetical wall defined by si, that is, a point on
+                        # the median plane between the loudspeaker and si
+                        pi = (loudspeaker + sorted_virtual_sources[i]) / 2
 
-    return 0
+                        # n2 is the outward pointing unit normal
+                        ni = (sorted_virtual_sources[i] - loudspeaker) / np.linalg.norm(
+                            sorted_virtual_sources[i] - loudspeaker)
+
+                        plane = sp.Plane(p1=pi, normal_vector=ni)
+                        for wall in room:
+                            if plane.intersection(wall) > 0:
+                                room.append(plane)
+                                break
+
+                # TODO finish the following method implementation:
+                # else if Plane(si) intersects the current room
+                # add Plane(si) to the set of planes
+                # else
+                # deleted[i] = true
+    return room
