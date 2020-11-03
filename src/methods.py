@@ -1,11 +1,13 @@
 import numpy as np
 from scipy.signal import find_peaks
 import sympy as sp
+# noinspection PyDeprecation
 import pyroomacoustics as pra
 import json
 import os
 
 
+# noinspection PyDeprecation
 def build_room(dimensions, source, mic_array, rt60, fs):
     """
     This method wraps inside all the necessary steps
@@ -242,6 +244,7 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
                 # else
                 # deleted[i] = true
     return room
+
 
 def input_data(file_dir="../input", file_name="room.json"):
     """
