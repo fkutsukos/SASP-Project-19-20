@@ -2,6 +2,8 @@ import numpy as np
 from scipy.signal import find_peaks
 import sympy as sp
 import pyroomacoustics as pra
+import json
+import os
 
 
 def build_room(dimensions, source, mic_array, rt60, fs):
@@ -240,3 +242,20 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
                 # else
                 # deleted[i] = true
     return room
+
+
+def input_data(file_dir="../input", file_name="room.json"):
+    """
+    This method receives the input data from a JSON formatted file
+    :param: file_dir: the directory from where to read the data
+    :param: file_name: the name of the file to be read
+    :return: the dictionary of input data
+    """
+    data = {}
+    path_to_file = os.path.join(file_dir, file_name)
+    if os.path.exists(path_to_file):
+        with open(path_to_file) as f:
+            data = json.load(f)
+    else:
+        print('File not found in directory {}'.format(file_dir))
+    return data

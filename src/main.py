@@ -14,11 +14,20 @@ def print_hi(name):
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     # Testing the Trilateration method with the data contained in the paper Murphy-Hereman Trilateration
-    source =methods.trilateration(np.array([[475060, 481500, 482230, 478050, 471430, 468720, 467400, 468730],
-                                            [1096300, 1094900, 1088430, 1087810, 1088580, 1091240, 1093980, 1097340],
-                                            [4670, 4694, 4831, 4775, 4752, 4803, 4705, 4747]]),
-                                  np.array([5942.607, 2426.635, 5094.254, 5549.874, 9645.353, 11419.870, 12639.330, 12078.820]))
+    """
+    source = methods.trilateration(np.array([[475060, 481500, 482230, 478050, 471430, 468720, 467400, 468730],
+                                             [1096300, 1094900, 1088430, 1087810, 1088580, 1091240, 1093980, 1097340],
+                                             [4670, 4694, 4831, 4775, 4752, 4803, 4705, 4747]]),
+                                   np.array([5942.607, 2426.635, 5094.254, 5549.874, 9645.353, 11419.870, 12639.330,
+                                             12078.820]))
     print(source)
-    print_hi("SASP")
+    """
+    # testing the build room using input from json file
+    room_data = methods.input_data(file_dir="../input", file_name="room.json")
+    rt60 = float(room_data['rt60'])
+    dimensions = list(map(float, room_data['dimensions']))
+    mic_array = [list(map(float, lst)) for lst in room_data['mic_array']]
+    source = list(map(float, room_data['source']))
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    print(rt60, dimensions, mic_array, source)
+
