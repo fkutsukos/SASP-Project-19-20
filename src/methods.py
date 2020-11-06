@@ -17,7 +17,7 @@ def build_room(dimensions, source, mic_array, rt60, fs):
     :param mic_array: contains the x, y, z vectors of all the microphones
     :param float rt60: represents the reverberation time of the room
     :param int fs: represents the sampling frequency used for the generation of signals
-    :return: pyroomacoustics object representing the room
+    :return: pyroomacoustics object representing the room and the fractional delay to compensate
     """
     # We invert Sabine's formula to obtain the parameters for the ISM simulator
     e_absorption, max_order = pra.inverse_sabine(rt60, dimensions)
@@ -34,7 +34,10 @@ def build_room(dimensions, source, mic_array, rt60, fs):
     room.image_source_model()
     room.compute_rir()
 
-    return room
+    # Getting the fractional delay introduced by the simulation
+    global_delay = pra.constants.get("frac_delay_length") // 2
+
+    return room, global_delay
 
 
 def peak_picking(mic_rirs, number_of_echoes, prominence=0.05, distance=5):
@@ -75,7 +78,7 @@ def build_edm(mic_locations):
     return D
 
 
-def echo_labeling(edm, mic_peaks, k, fs, c=343.0):
+def echo_labeling(edm, mic_peaks, k, fs, global_delay, c=343.0):
     """
     This method evaluates if the matrix Daug, generated adding a row and
     a column made of the possible echo combinations squared to the
@@ -87,11 +90,13 @@ def echo_labeling(edm, mic_peaks, k, fs, c=343.0):
     peaks found in the RIR captured by each microphone.
     :param k: dimensionality of the space.
     :param fs: sampling frequency used in the RIRs measure.
+    :param global_delay: fractional delay to be compensated.
     :param c: speed of sound (set to the default value of 343 m/s).
     :return: a list containing all the echo combinations that satisfy
     the EDM property
     """
     # Converting the RIR peak location indexes into space distances
+    mic_peaks -= global_delay
     mic_peaks *= c / fs
 
     # Building a grid of each possible echo combination
