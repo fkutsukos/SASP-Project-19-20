@@ -23,7 +23,7 @@ if __name__ == '__main__':
                                              12078.820]))
     print(source)
     """
-    # testing the build room using input from json file
+    # Testing the build room using input from json file
     room_data = methods.input_data(file_dir="../input", file_name="room.json")
     rt60 = float(room_data['rt60'])
     dimensions = list(map(float, room_data['dimensions']))
@@ -33,10 +33,18 @@ if __name__ == '__main__':
 
     room, global_delay = methods.build_room(dimensions, source, mic_array, rt60, fs)
     edm = methods.build_edm(np.array(mic_array))
+    # Trying to locate the source considering only one peak per RIR
     peaks = methods.peak_picking(room.rir, 1)
     echoes = methods.echo_labeling(edm, np.array(peaks, dtype=float), 3, fs, global_delay)
 
     virtual_sources = []
 
+    # Computing and printing in 3D the virtual sources
+    fig = plt.figure()
+    ax = plt.axes(projection="3d")
     for echo in echoes:
-        virtual_sources.append(methods.trilateration(np.array(mic_array), echo))
+        source = methods.trilateration(np.array(mic_array), echo)
+        virtual_sources.append(source)
+        ax.scatter3D(*source)
+    plt.show()
+
