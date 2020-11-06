@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     room, global_delay = methods.build_room(dimensions, source, mic_array, rt60, fs)
     edm = methods.build_edm(np.array(mic_array))
-    peaks = methods.peak_picking(room.rir, 5)
+    peaks = methods.peak_picking(room.rir, 1)
     echoes = methods.echo_labeling(edm, np.array(peaks, dtype=float), 3, fs, global_delay)
 
     virtual_sources = []
