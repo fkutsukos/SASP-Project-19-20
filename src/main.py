@@ -38,13 +38,15 @@ if __name__ == '__main__':
     echoes = methods.echo_labeling(edm, np.array(peaks, dtype=float), 3, fs, global_delay)
 
     virtual_sources = []
-
+    echoes.sort()
     # Computing and printing in 3D the virtual sources
     fig = plt.figure()
     ax = plt.axes(projection="3d")
     for echo in echoes:
-        source = methods.trilateration(np.array(mic_array), echo)
-        virtual_sources.append(source)
-        ax.scatter3D(*source)
+        if echo[0] < 50:
+            source = methods.trilaterate_beck(np.array(mic_array).transpose(), echo[1])
+            # source = methods.trilateration(np.array(mic_array), echo[1])
+            virtual_sources.append(source)
+            ax.scatter3D(*source)
     plt.show()
 

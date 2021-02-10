@@ -6,6 +6,8 @@ import pyroomacoustics as pra
 import json
 import os
 
+from sklearn.manifold import MDS
+
 
 # noinspection PyDeprecation
 def build_room(dimensions, source, mic_array, rt60, fs):
@@ -119,12 +121,16 @@ def echo_labeling(edm, mic_peaks, k, fs, global_delay, c=343.0):
         # Adding the echo combination squared
         d_aug[0:-1, -1] = echo ** 2
         d_aug[-1, 0:-1] = echo ** 2
-        print(d_aug)
+        # print(d_aug)
         # In a k dimensional space, the rank cannot be greater than k + 2
-        if np.linalg.matrix_rank(d_aug) <= k + 2:
-            print(np.linalg.matrix_rank(d_aug))
-            echoes_match.append(echo)
-    print(echoes_match)
+        if np.linalg.matrix_rank(d_aug) <= k + 3:
+            # print(np.linalg.matrix_rank(d_aug))
+            embedding = MDS(n_components=k, dissimilarity="precomputed")
+            embedding.fit(d_aug)
+            # print(embedding.embedding_)
+            # print(embedding.stress_)
+            echoes_match.append((embedding.stress_, echo))
+    # print(echoes_match)
     return echoes_match
 
 
@@ -164,6 +170,54 @@ def trilateration(mic_locations, distances):
     virtual_source_loc = np.linalg.pinv(A).dot(b) + reference_mic
 
     return virtual_source_loc
+
+
+def trilaterate_beck(anchors, distances):
+    d = anchors.shape[1]
+    m = len(distances)
+
+    A = np.concatenate((-2 * anchors, np.ones(shape=(m, 1))), axis=-1)
+    print("A:", A)
+    b = np.c_[distances ** 2 - np.sum(anchors ** 2, axis=-1)]
+    print("b:", b)
+
+    D = np.concatenate((np.concatenate((np.eye(d), np.zeros((d, 1))), axis=-1), np.zeros((1, d + 1))))
+    print("D:", D)
+
+    f = np.zeros((d + 1, 1))
+    f[-1][-1] = -.5
+    print("f:", f)
+
+    def y(lamda):
+        return np.linalg.pinv(A.transpose().dot(A) + lamda * D).dot(A.transpose().dot(b) - lamda * f)
+
+    def phi(lamda):
+        return y(lamda).transpose().dot(D).dot(y(lamda)) + 2 * f.transpose().dot(y(lamda))
+
+    eigDAA, _ = sp.linalg.eig(D, A.transpose().dot(A))
+    print("eigDAA:", eigDAA)
+    lambda1 = eigDAA[-1]
+    print("lambda1:", lambda1)
+
+    a1 = -1/lambda1
+    print("a1:", a1)
+    a2 = 1000
+    print("a2:", a2)
+
+    epsAbs = 1e-5
+    epsStep = 1e-5
+
+    while a2 - a1 >= epsStep or (np.abs(phi(a1)) >= epsAbs and np.abs(phi(a2)) >= epsAbs):
+        c = (a1 + a2)/2
+        if phi(c) == 0:
+            break
+        else:
+            if phi(a1) * phi(c) < 0:
+                a2 = c
+            else:
+                a1 = c
+
+    return y(c)[:-1]
 
 
 def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
