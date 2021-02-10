@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.signal import find_peaks
 import sympy as sp
-import scipy as scpy
+import scipy
+from scipy import interpolate
 # noinspection PyDeprecation
 import pyroomacoustics as pra
 import json
@@ -43,6 +44,15 @@ def build_room(dimensions, source, mic_array, rt60, fs):
     return room, global_delay
 
 
+def spline_interpolation(mic_rir, N):
+    l = len(mic_rir)
+    x = np.linspace(0, l, l)
+    spline = interpolate.InterpolatedUnivariateSpline(x, mic_rir)
+    x_new = np.linspace(0, l, N * l)
+    y_new = spline(x_new)
+    return y_new
+
+
 def peak_picking(mic_rirs, number_of_echoes, prominence=0.05, distance=5):
     """
     This method receives a list of microphone room impulse responses and extracts the location of the main peaks.
@@ -58,6 +68,7 @@ def peak_picking(mic_rirs, number_of_echoes, prominence=0.05, distance=5):
     peak_indexes = []
     for mic in range(len(mic_rirs)):
         peaks, _ = find_peaks(mic_rirs[mic][0], prominence=prominence, distance=distance)
+        # peaks, _ = find_peaks(mic_rirs[mic], prominence=prominence, distance=distance)
         peak_indexes.append(peaks[0:number_of_echoes])
     return peak_indexes
 
@@ -195,7 +206,7 @@ def trilaterate_beck(anchors, distances):
     def phi(lamda):
         return y(lamda).transpose().dot(D).dot(y(lamda)) + 2 * f.transpose().dot(y(lamda))
 
-    eigDAA, _ = scpy.linalg.eig(D, A.transpose().dot(A))
+    eigDAA, _ = scipy.linalg.eig(D, A.transpose().dot(A))
     print("eigDAA:", eigDAA)
     lambda1 = eigDAA[-1]
     print("lambda1:", lambda1)

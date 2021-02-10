@@ -33,8 +33,17 @@ if __name__ == '__main__':
 
     room, global_delay = methods.build_room(dimensions, source, mic_array, rt60, fs)
     edm = methods.build_edm(np.array(mic_array))
+
+    '''
+    Code to implement spline interpolation.
+    mic_rirs = []
+
+    for mic in range(len(room.rir)):
+        mic_rirs.append(methods.spline_interpolation(room.rir[mic][0], 100))
+    '''
+
     # Trying to locate the source considering only one peak per RIR
-    peaks = methods.peak_picking(room.rir, 1)
+    peaks = methods.peak_picking(room.rir, 3)
     echoes = methods.echo_labeling(edm, np.array(peaks, dtype=float), 3, fs, global_delay)
 
     virtual_sources = []
@@ -44,8 +53,8 @@ if __name__ == '__main__':
     ax = plt.axes(projection="3d")
     for echo in echoes:
         if echo[0] < 50:
-            source = methods.trilaterate_beck(np.array(mic_array).transpose(), echo[1])
-            # source = methods.trilateration(np.array(mic_array), echo[1])
+            # source = methods.trilaterate_beck(np.array(mic_array).transpose(), echo[1])
+            source = methods.trilateration(np.array(mic_array), echo[1])
             virtual_sources.append(source)
             ax.scatter3D(*source)
     plt.show()
