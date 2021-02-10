@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.signal import find_peaks
 import sympy as sp
+import scipy as scpy
 # noinspection PyDeprecation
 import pyroomacoustics as pra
 import json
@@ -194,7 +195,7 @@ def trilaterate_beck(anchors, distances):
     def phi(lamda):
         return y(lamda).transpose().dot(D).dot(y(lamda)) + 2 * f.transpose().dot(y(lamda))
 
-    eigDAA, _ = sp.linalg.eig(D, A.transpose().dot(A))
+    eigDAA, _ = scpy.linalg.eig(D, A.transpose().dot(A))
     print("eigDAA:", eigDAA)
     lambda1 = eigDAA[-1]
     print("lambda1:", lambda1)
