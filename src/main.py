@@ -2,7 +2,7 @@
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
-import methods
+import methods, peaking_test
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -41,21 +41,24 @@ if __name__ == '__main__':
     for mic in range(len(room.rir)):
         mic_rirs.append(methods.spline_interpolation(room.rir[mic][0], 100))
     '''
+    peaks = peaking_test.find_echoes(room.rir, global_delay=global_delay, n=5).astype(int)
 
     # Trying to locate the source considering only one peak per RIR
-    peaks = methods.peak_picking(room.rir, 3)
-    echoes = methods.echo_labeling(edm, np.array(peaks, dtype=float), 3, fs, global_delay)
+    # peaks = methods.peak_picking(room.rir, 3)
+    echoes = methods.echo_labeling(edm, np.array(peaks, dtype=float), 2, fs, global_delay)
 
     virtual_sources = []
     echoes.sort()
     # Computing and printing in 3D the virtual sources
     fig = plt.figure()
-    ax = plt.axes(projection="3d")
-    for echo in echoes:
-        if echo[0] < 50:
-            # source = methods.trilaterate_beck(np.array(mic_array).transpose(), echo[1])
-            source = methods.trilateration(np.array(mic_array), echo[1])
-            virtual_sources.append(source)
-            ax.scatter3D(*source)
+    # ax = plt.axes(projection="3d")
+    ax = plt.axes()
+    for echo in echoes[:50]:
+        # if echo[0] < np.inf:
+        # source = methods.trilaterate_beck(np.array(mic_array).transpose(), echo[1])
+        source = methods.trilateration(np.array(mic_array), echo[1])
+        virtual_sources.append(source)
+        # ax.scatter3D(*source)
+        ax.scatter(*source)
     plt.show()
 

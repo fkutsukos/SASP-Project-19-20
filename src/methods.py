@@ -27,7 +27,7 @@ def build_room(dimensions, source, mic_array, rt60, fs):
     e_absorption, max_order = pra.inverse_sabine(rt60, dimensions)
 
     # Building a 'Shoebox' room with the provided dimensions
-    room = pra.ShoeBox(p=dimensions, fs=fs, absorption=e_absorption, max_order=max_order)
+    room = pra.ShoeBox(p=dimensions, fs=fs, absorption=e_absorption, max_order=1)
 
     # Place the Microphone Array and the Sound Source inside the room
     mics = pra.MicrophoneArray(mic_array, fs)
@@ -40,6 +40,8 @@ def build_room(dimensions, source, mic_array, rt60, fs):
 
     # Getting the fractional delay introduced by the simulation
     global_delay = pra.constants.get("frac_delay_length") // 2
+
+    room.plot()
 
     return room, global_delay
 
@@ -135,13 +137,13 @@ def echo_labeling(edm, mic_peaks, k, fs, global_delay, c=343.0):
         d_aug[-1, 0:-1] = echo ** 2
         # print(d_aug)
         # In a k dimensional space, the rank cannot be greater than k + 2
-        if np.linalg.matrix_rank(d_aug) <= k + 3:
-            # print(np.linalg.matrix_rank(d_aug))
-            embedding = MDS(n_components=k, dissimilarity="precomputed")
-            embedding.fit(d_aug)
-            # print(embedding.embedding_)
-            # print(embedding.stress_)
-            echoes_match.append((embedding.stress_, echo))
+        # if np.linalg.matrix_rank(d_aug) <= k + 2:
+        # print(np.linalg.matrix_rank(d_aug))
+        embedding = MDS(n_components=k, dissimilarity="precomputed")
+        embedding.fit(d_aug)
+        # print(embedding.embedding_)
+        # print(embedding.stress_)
+        echoes_match.append((embedding.stress_, echo))
     # print(echoes_match)
     return echoes_match
 
