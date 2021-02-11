@@ -53,7 +53,7 @@ if __name__ == '__main__':
     fig = plt.figure()
     # ax = plt.axes(projection="3d")
     ax = plt.axes()
-    for echo in echoes[:50]:
+    for echo in echoes[:10]:
         # if echo[0] < np.inf:
         # source = methods.trilaterate_beck(np.array(mic_array).transpose(), echo[1])
         source = methods.trilateration(np.array(mic_array), echo[1])

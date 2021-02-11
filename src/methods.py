@@ -2,6 +2,7 @@ import numpy as np
 from scipy.signal import find_peaks
 import sympy as sp
 import scipy
+from scipy.optimize import minimize
 from scipy import interpolate
 # noinspection PyDeprecation
 import pyroomacoustics as pra
@@ -139,11 +140,26 @@ def echo_labeling(edm, mic_peaks, k, fs, global_delay, c=343.0):
         # In a k dimensional space, the rank cannot be greater than k + 2
         # if np.linalg.matrix_rank(d_aug) <= k + 2:
         # print(np.linalg.matrix_rank(d_aug))
-        embedding = MDS(n_components=k, dissimilarity="precomputed")
-        embedding.fit(d_aug)
+        # embedding = MDS(n_components=k, dissimilarity="precomputed")
+        # embedding.fit(d_aug)
+
+        def stress(x, daug):
+            m = len(daug)
+            X = x.reshape((-1, m))
+            stress_score = 0
+            for j in range(m):
+                for i in range(m):
+                    stress_score = stress_score + (np.linalg.norm(X[:, j] - X[:, i]) ** 2 - daug[i, j]) ** 2
+
+            return stress_score
+
+        res = minimize(stress, x0=np.random.rand(1, len(d_aug) * 3), args=(d_aug,), method='SLSQP',
+                       options={'disp': False})
+
         # print(embedding.embedding_)
         # print(embedding.stress_)
-        echoes_match.append((embedding.stress_, echo))
+        score = res.fun
+        echoes_match.append((score, echo))
     # print(echoes_match)
     return echoes_match
 
