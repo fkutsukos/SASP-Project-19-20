@@ -1,18 +1,16 @@
 import numpy as np
 from scipy.signal import find_peaks
 import sympy as sp
-import scipy
 from scipy.optimize import minimize
 from scipy import interpolate
-# noinspection PyDeprecation
 import pyroomacoustics as pra
 import json
 import os
-
-from sklearn.manifold import MDS
-
+import matplotlib.pyplot as plt
 
 # noinspection PyDeprecation
+
+
 def build_room(dimensions, source, mic_array, rt60, fs):
     """
     This method wraps inside all the necessary steps
@@ -28,7 +26,7 @@ def build_room(dimensions, source, mic_array, rt60, fs):
     e_absorption, max_order = pra.inverse_sabine(rt60, dimensions)
 
     # Building a 'Shoebox' room with the provided dimensions
-    room = pra.ShoeBox(p=dimensions, fs=fs, absorption=e_absorption, max_order=1)
+    room = pra.ShoeBox(p=dimensions, fs=fs, absorption=e_absorption, max_order=2)
 
     # Place the Microphone Array and the Sound Source inside the room
     mics = pra.MicrophoneArray(mic_array, fs)
@@ -42,7 +40,7 @@ def build_room(dimensions, source, mic_array, rt60, fs):
     # Getting the fractional delay introduced by the simulation
     global_delay = pra.constants.get("frac_delay_length") // 2
 
-    room.plot()
+    # room.plot()
 
     return room, global_delay
 
@@ -136,6 +134,7 @@ def echo_labeling(edm, mic_peaks, k, fs, global_delay, c=343.0):
         # Adding the echo combination squared
         d_aug[0:-1, -1] = echo ** 2
         d_aug[-1, 0:-1] = echo ** 2
+
         # print(d_aug)
         # In a k dimensional space, the rank cannot be greater than k + 2
         # if np.linalg.matrix_rank(d_aug) <= k + 2:
@@ -202,54 +201,6 @@ def trilateration(mic_locations, distances):
     return virtual_source_loc
 
 
-def trilaterate_beck(anchors, distances):
-    d = anchors.shape[1]
-    m = len(distances)
-
-    A = np.concatenate((-2 * anchors, np.ones(shape=(m, 1))), axis=-1)
-    print("A:", A)
-    b = np.c_[distances ** 2 - np.sum(anchors ** 2, axis=-1)]
-    print("b:", b)
-
-    D = np.concatenate((np.concatenate((np.eye(d), np.zeros((d, 1))), axis=-1), np.zeros((1, d + 1))))
-    print("D:", D)
-
-    f = np.zeros((d + 1, 1))
-    f[-1][-1] = -.5
-    print("f:", f)
-
-    def y(lamda):
-        return np.linalg.pinv(A.transpose().dot(A) + lamda * D).dot(A.transpose().dot(b) - lamda * f)
-
-    def phi(lamda):
-        return y(lamda).transpose().dot(D).dot(y(lamda)) + 2 * f.transpose().dot(y(lamda))
-
-    eigDAA, _ = scipy.linalg.eig(D, A.transpose().dot(A))
-    print("eigDAA:", eigDAA)
-    lambda1 = eigDAA[-1]
-    print("lambda1:", lambda1)
-
-    a1 = -1/lambda1
-    print("a1:", a1)
-    a2 = 1000
-    print("a2:", a2)
-
-    epsAbs = 1e-5
-    epsStep = 1e-5
-
-    while a2 - a1 >= epsStep or (np.abs(phi(a1)) >= epsAbs and np.abs(phi(a2)) >= epsAbs):
-        c = (a1 + a2)/2
-        if phi(c) == 0:
-            break
-        else:
-            if phi(a1) * phi(c) < 0:
-                a2 = c
-            else:
-                a1 = c
-
-    return y(c)[:-1]
-
-
 def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
     """
     This method uses the first-order virtual-sources to reconstruct the room:
@@ -277,9 +228,20 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
         p2 = (loudspeaker + s2) / 2
 
         # n2 is the outward pointing unit normal
-        n2 = (s2 - loudspeaker) / np.linalg.norm(s2 - loudspeaker)
+        n2 = (loudspeaker - s2) / np.linalg.norm(loudspeaker - s2)
 
         return s1 + 2 * np.dot((p2 - s1), n2) * n2
+
+    def perpendicular(a):
+        """
+        This method...
+        :param a:
+        :return:
+        """
+        b = np.empty_like(a)
+        b[0] = -a[1]
+        b[1] = a[0]
+        return b
 
     # Instantiating the array to contain the distance of each virtual source from the loudspeaker
     distances_from_speaker = []
@@ -289,50 +251,95 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
         distances_from_speaker.append(np.linalg.norm(source - loudspeaker))
 
     # Re-ordering the list of virtual sources according to their distance from the loudspeaker
-    distances_from_speaker = np.array(distances_from_speaker)
-    sorted_virtual_sources = candidate_virtual_sources[distances_from_speaker.argsort()]
+    candidate_virtual_sources = np.array(candidate_virtual_sources)
+    sorted_virtual_sources = candidate_virtual_sources[np.array(distances_from_speaker).argsort()][1:]
+
+    # wall_points = calculate_wall_points(sorted_virtual_sources, loudspeaker)
+
+    # vertices = calculate_vertices2D(wall_points)
 
     # Initialize the list of planes that constitutes the room
     room = []
-
+    vertices = []
     # Initialize the boolean mask to identify the first-order virtual sources
     deleted = np.array([False] * len(sorted_virtual_sources), dtype=bool)
 
     for i in range(len(sorted_virtual_sources)):
-        for idx1 in range(i):
-            for idx2 in range(i):
+        for j in range(i):
+            for k in range(i):
                 # The following two conditions verify if the current virtual source is a combination of lower order
                 # virtual sources: if so, it is deleted from the available candidates
-                if idx1 != idx2 and not deleted[idx1] and not deleted[idx2]:
+                if j != k and k < i:
                     if np.linalg.norm(
                             combine(
-                                sorted_virtual_sources[idx1], sorted_virtual_sources[idx2]
+                                sorted_virtual_sources[j], sorted_virtual_sources[k]
                             ) - sorted_virtual_sources[i]
                     ) < dist_thresh:
                         deleted[i] = True
+
                     # If the virtual source is not a combination of lower order virtual sources, the corresponding plane
                     # is built and it is added to the room's walls list
-                    else:
-                        # pi is a point on the hypothetical wall defined by si, that is, a point on
-                        # the median plane between the loudspeaker and si
-                        pi = (loudspeaker + sorted_virtual_sources[i]) / 2
 
-                        # n2 is the outward pointing unit normal
-                        ni = (sorted_virtual_sources[i] - loudspeaker) / np.linalg.norm(
-                            sorted_virtual_sources[i] - loudspeaker)
+    for i in range(len(sorted_virtual_sources)):
+        if deleted[i] is True:
+            continue
+        else:
+            # pi is a point on the hypothetical wall defined by si, that is, a point on
+            # the median plane between the loudspeaker and si
+            pi = (loudspeaker + sorted_virtual_sources[i]) / 2
+            # ni is the outward pointing unit normal
+            ni = (loudspeaker - sorted_virtual_sources[i]) / np.linalg.norm(
+                loudspeaker - sorted_virtual_sources[i])
 
-                        plane = sp.Plane(p1=pi, normal_vector=ni)
-                        for wall in room:
-                            if plane.intersection(wall) > 0:
-                                room.append(plane)
-                                break
+            plane = {}
+            # plane = sp.Plane(p1=pi, normal_vector=ni)
+            if len(pi) == 2:
+                ni_perp = perpendicular(ni)
+                pi2 = pi + ni_perp
+                plane = sp.Line(pi, pi2)
 
-                # TODO finish the following method implementation:
-                # else if Plane(si) intersects the current room
-                # add Plane(si) to the set of planes
-                # else
-                # deleted[i] = true
-    return room
+            elif len(pi) == 3:
+                plane = sp.Plane(pi, ni)
+
+            # If the room is empty, we add the first plane to the list of halfspaces whose intersection
+            # determines the final room
+            if len(room) == 0:
+                room.append(plane)
+            else:
+                for wall in room:
+                    if len(plane.intersection(wall)) > 0:
+                        # vertices.append(plane.intersection(wall))
+                        room.append(plane)
+                        break
+                if plane not in room:
+                    deleted[i] = True
+    for wall1 in range(len(room)):
+        for wall2 in range(wall1):
+            intersections = room[wall2].intersection(room[wall1])
+            if wall1 != wall2 and len(intersections) > 0:
+                for intersection in intersections:
+                    if abs(float(intersection.x)) < 100 and abs(float(intersection.y)) < 100:
+                        vertices.append(intersection)
+    return room, vertices
+
+
+def plot_room(room, vertices):
+    """
+    This method...
+    :param room:
+    :param vertices:
+    :return:
+    """
+    # Plotting in 2D case
+    if room[0].ambient_dimension == 2:
+        plt.figure()
+        ax = plt.axes()
+
+        for vertex in vertices:
+            ax.scatter(float(vertex.x), float(vertex.y))
+        plt.show()
+
+    # TODO: Plotting in 3D case
 
 
 def input_data(file_dir="../input", file_name="room.json"):
