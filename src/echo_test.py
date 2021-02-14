@@ -88,7 +88,7 @@ def echo_sorting(edm, mic_peaks, k, diameter, fs, global_delay, c=343.0):
                     return stress_score
 
                 # Multi-Dimensional Scaling using the s-stress function as target
-                res = minimize(stress, x0=np.random.rand(1, len(d_aug) * 3), args=(d_aug,), method='SLSQP',
+                res = minimize(stress, x0=np.random.rand(1, len(d_aug) * k), args=(d_aug,), method='SLSQP',
                                options={'disp': False})
 
                 # Extracting the optimal function value
