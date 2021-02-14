@@ -44,11 +44,11 @@ if __name__ == '__main__':
                 for mic in range(len(room.rir)):
                     mic_rirs.append(methods.spline_interpolation(room.rir[mic][0], 100))
                 '''
+                peaks = peaking_test.find_echoes(room.rir, global_delay=global_delay, n=7).astype(int)
 
-                peaks = peaking_test.find_echoes(room.rir, global_delay=global_delay, n=5).astype(int)
-
+                intermic_max_distance = np.sqrt(np.max(edm))
                 # Trying to locate the source considering only one peak per RIR
-                echoes = echo_test.echo_sorting(edm, np.array(peaks, dtype=float), len(dimensions), 4.0, fs, global_delay)
+                echoes = echo_test.echo_sorting(edm, np.array(peaks, dtype=float), len(dimensions), intermic_max_distance, fs, global_delay)
                 number_of_microphones = np.array(mic_array).shape[1]
                 csv_file_name = user_input + '.csv'
                 print('Echoes are saved to ' + csv_file_name)
@@ -75,13 +75,13 @@ if __name__ == '__main__':
 
         # Computing and printing in 3D the virtual sources
         fig = plt.figure()
-        # ax = plt.axes(projection="3d")
-        ax = plt.axes()
+        ax = plt.axes(projection="3d")
+        # ax = plt.axes()
         for echo in echoes:
             source = methods.trilateration(np.array(mic_array), echo[1])
             virtual_sources.append(source)
-            # ax.scatter3D(*source)
-            ax.scatter(*source)
+            ax.scatter3D(*source)
+            # ax.scatter(*source)
         plt.show()
         room, vertices = methods.reconstruct_room(virtual_sources, np.array(loudspeaker), 1e-2)
         methods.plot_room(room, vertices)
