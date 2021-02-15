@@ -44,7 +44,7 @@ if __name__ == '__main__':
                 for mic in range(len(room.rir)):
                     mic_rirs.append(methods.spline_interpolation(room.rir[mic][0], 100))
                 '''
-                peaks = peaking_test.find_echoes(room.rir, global_delay=global_delay, n=7).astype(int)
+                peaks = peaking_test.find_echoes(room.rir, global_delay=global_delay, n=15).astype(int)
 
                 intermic_max_distance = np.sqrt(np.max(edm))
                 # Trying to locate the source considering only one peak per RIR

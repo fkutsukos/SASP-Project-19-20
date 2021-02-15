@@ -299,7 +299,7 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
                 plane = sp.Line(pi, pi2)
 
             elif len(pi) == 3:
-                plane = sp.Plane(pi, ni)
+                plane = sp.Plane(sp.Point3D(pi), normal_vector=ni)
 
             # If the room is empty, we add the first plane to the list of halfspaces whose intersection
             # determines the final room
@@ -313,13 +313,31 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
                         break
                 if plane not in room:
                     deleted[i] = True
-    for wall1 in range(len(room)):
-        for wall2 in range(wall1):
-            intersections = room[wall2].intersection(room[wall1])
-            if wall1 != wall2 and len(intersections) > 0:
-                for intersection in intersections:
-                    if abs(float(intersection.x)) < 100 and abs(float(intersection.y)) < 100:
-                        vertices.append(intersection)
+    if len(pi) == 2:
+        for wall1 in range(len(room)):
+            for wall2 in range(wall1):
+                if wall1 != wall2:
+                    intersections = room[wall2].intersection(room[wall1])
+                    if len(intersections) > 0:
+                        for intersection in intersections:
+                            if abs(float(intersection.x)) < 100 and abs(float(intersection.y)) < 100:
+                                vertices.append(intersection)
+
+    if len(pi) == 3:
+        planes_intersections = []
+        for wall1 in range(len(room)):
+            for wall2 in range(wall1):
+                if wall1 != wall2:
+                    planes_intersections.append(room[wall2].intersection(room[wall1]))
+
+        for inter1 in range(len(planes_intersections)):
+            for inter2 in range(inter1):
+                if inter1 != inter2:
+                    intersections = planes_intersections[inter2][0].intersection(planes_intersections[inter1][0])
+                    if len(intersections) > 0:
+                        for intersection in intersections:
+                            if abs(float(intersection.x)) < 100 and abs(float(intersection.y)) < 100 and abs(float(intersection.z)) < 100 and intersection not in vertices:
+                                vertices.append(intersection)
     return room, vertices
 
 
@@ -335,11 +353,18 @@ def plot_room(room, vertices):
         plt.figure()
         ax = plt.axes()
 
-        for vertex in vertices:
+        for i, vertex in enumerate(vertices):
+            print('Vertex ', i, ': x=', float(vertex.x), ', y=', float(vertex.y))
             ax.scatter(float(vertex.x), float(vertex.y))
         plt.show()
 
-    # TODO: Plotting in 3D case
+    else:
+        fig = plt.figure()
+        ax = plt.axes(projection="3d")
+        for i, vertex in enumerate(vertices):
+            print('Vertex ', i, ': x=', float(vertex.x), ', y=', float(vertex.y), ', z=', float(vertex.z))
+            ax.scatter3D(float(vertex.x), float(vertex.y), float(vertex.z))
+        plt.show()
 
 
 def input_data(file_dir="../input", file_name="room.json"):
