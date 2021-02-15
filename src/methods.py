@@ -281,9 +281,7 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
                     # is built and it is added to the room's walls list
 
     for i in range(len(sorted_virtual_sources)):
-        if deleted[i] is True:
-            continue
-        else:
+        if not deleted[i]:
             # pi is a point on the hypothetical wall defined by si, that is, a point on
             # the median plane between the loudspeaker and si
             pi = (loudspeaker + sorted_virtual_sources[i]) / 2
@@ -313,7 +311,7 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
                         break
                 if plane not in room:
                     deleted[i] = True
-    if len(pi) == 2:
+    if room[0].ambient_dimension == 2:
         for wall1 in range(len(room)):
             for wall2 in range(wall1):
                 if wall1 != wall2:
@@ -323,7 +321,7 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
                             if abs(float(intersection.x)) < 100 and abs(float(intersection.y)) < 100:
                                 vertices.append(intersection)
 
-    if len(pi) == 3:
+    if room[0].ambient_dimension == 3:
         planes_intersections = []
         for wall1 in range(len(room)):
             for wall2 in range(wall1):

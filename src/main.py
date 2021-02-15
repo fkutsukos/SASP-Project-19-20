@@ -44,7 +44,12 @@ if __name__ == '__main__':
                 for mic in range(len(room.rir)):
                     mic_rirs.append(methods.spline_interpolation(room.rir[mic][0], 100))
                 '''
-                peaks = peaking_test.find_echoes(room.rir, global_delay=global_delay, n=15).astype(int)
+                peaks = peaking_test.find_echoes(room.rir, global_delay=global_delay, n=20).astype(int)
+                rir1 = room.rir[1][0]
+                plt.plot(rir1)
+                plt.plot(peaks[1], rir1[peaks[1]], "x")
+                plt.plot(np.zeros_like(rir1), "--", color="gray")
+                plt.show()
 
                 intermic_max_distance = np.sqrt(np.max(edm))
                 # Trying to locate the source considering only one peak per RIR
@@ -71,6 +76,7 @@ if __name__ == '__main__':
             continue
 
         virtual_sources = []
+
         echoes.sort()
 
         # Computing and printing in 3D the virtual sources
@@ -90,5 +96,5 @@ if __name__ == '__main__':
         plt.show()
 
         # Reconstructing the room using the virtual sources location
-        room, vertices = methods.reconstruct_room(virtual_sources, np.array(loudspeaker), 1e-2)
+        room, vertices = methods.reconstruct_room(virtual_sources, np.array(loudspeaker), 1e-1)
         methods.plot_room(room, vertices)
