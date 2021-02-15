@@ -75,13 +75,20 @@ if __name__ == '__main__':
 
         # Computing and printing in 3D the virtual sources
         fig = plt.figure()
-        ax = plt.axes(projection="3d")
-        # ax = plt.axes()
+        if len(dimensions) == 3:
+            ax = plt.axes(projection="3d")
+        else:
+            ax = plt.axes()
+
         for echo in echoes:
             source = methods.trilateration(np.array(mic_array), echo[1])
             virtual_sources.append(source)
-            ax.scatter3D(*source)
-            # ax.scatter(*source)
+            if len(dimensions) == 3:
+                ax.scatter3D(*source)
+            else:
+                ax.scatter(*source)
         plt.show()
+
+        # Reconstructing the room using the virtual sources location
         room, vertices = methods.reconstruct_room(virtual_sources, np.array(loudspeaker), 1e-2)
         methods.plot_room(room, vertices)
