@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 
-def echo_sorting(edm, mic_peaks, k, diameter, fs, global_delay, c=343.0):
+def echo_sorting(edm, mic_peaks, k, diameter, fs, global_delay, alpha=0.0,  c=343.0):
     """
     This method evaluates if the matrix Daug, generated adding a row and
     a column made of the possible echo combinations squared to the
@@ -19,6 +19,7 @@ def echo_sorting(edm, mic_peaks, k, diameter, fs, global_delay, c=343.0):
     used to limit the possible echo combinations.
     :param fs: sampling frequency used in the RIRs measure.
     :param global_delay: fractional delay to be compensated.
+    :param alpha: regularization term for distance in stress-score
     :param c: speed of sound (set to the default value of 343 m/s).
     :return: a list containing all the echo combinations that better fit
     the EDM property
@@ -85,6 +86,7 @@ def echo_sorting(edm, mic_peaks, k, diameter, fs, global_delay, c=343.0):
                         for i in range(m):
                             # Definition of the s-stress score function
                             stress_score = stress_score + (np.linalg.norm(X[:, j] - X[:, i]) ** 2 - daug[i, j]) ** 2
+                        stress_score = stress_score + alpha * np.sqrt(daug[-1, j])
                     return stress_score
 
                 # Multi-Dimensional Scaling using the s-stress function as target
