@@ -44,7 +44,7 @@ if __name__ == '__main__':
                 for mic in range(len(room.rir)):
                     mic_rirs.append(methods.spline_interpolation(room.rir[mic][0], 100))
                 '''
-                peaks = peaking_test.find_echoes(room.rir, global_delay=global_delay, n=20).astype(int)
+                peaks = peaking_test.find_echoes(room.rir, global_delay=global_delay, n=15).astype(int)
                 rir1 = room.rir[1][0]
                 plt.plot(rir1)
                 plt.plot(peaks[1], rir1[peaks[1]], "x")

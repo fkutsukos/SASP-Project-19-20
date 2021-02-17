@@ -201,7 +201,7 @@ def trilateration(mic_locations, distances):
     return virtual_source_loc
 
 
-def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
+def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh, shoebox=True):
     """
     This method uses the first-order virtual-sources to reconstruct the room:
     it processes the candidate virtual sources in the order of increasing distance
@@ -211,6 +211,7 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
     virtual sources (it could contain even higher-order virtual sources)
     :param loudspeaker: x, y, z coordinates of the speaker location in the room
     :param dist_thresh: distance threshold (epsilon)
+    :param shoebox: boolean to identify if the room is a shoebox
     :return: list of planes corresponding to the first-order virtual sources
     """
 
@@ -277,8 +278,39 @@ def reconstruct_room(candidate_virtual_sources, loudspeaker, dist_thresh):
                     ) < dist_thresh:
                         deleted[i] = True
 
-                    # If the virtual source is not a combination of lower order virtual sources, the corresponding plane
-                    # is built and it is added to the room's walls list
+    if shoebox:
+
+        directions = []
+
+        if len(loudspeaker) == 2:
+            x = sp.Line2D(loudspeaker, loudspeaker + [0, 1])
+            y = sp.Line2D(loudspeaker, loudspeaker + [1, 0])
+            directions.append(x)
+            directions.append(y)
+
+        elif len(loudspeaker) == 3:
+            planes = []
+            x = sp.Plane(loudspeaker, [1, 0, 0])
+            y = sp.Plane(loudspeaker, [0, 1, 0])
+            z = sp.Plane(loudspeaker, [0, 0, 1])
+            planes.append(x)
+            planes.append(y)
+            planes.append(z)
+            for i in range(3):
+                for j in range(i):
+                    directions.append(planes[i].intersection(planes[j]))
+
+        for i in range(len(sorted_virtual_sources)):
+            if not deleted[i]:
+                for index, direction in enumerate(directions):
+                    if direction[0].distance(sp.Point(sorted_virtual_sources[i])) < dist_thresh:
+                        break
+                    else:
+                        if index == len(directions) - 1:
+                            deleted[i] = True
+
+    # If the virtual source is not a combination of lower order virtual sources, the corresponding plane
+    # is built and it is added to the room's walls list
 
     for i in range(len(sorted_virtual_sources)):
         if not deleted[i]:
