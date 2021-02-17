@@ -2,6 +2,25 @@ import numpy as np
 from scipy.optimize import minimize
 
 
+def build_edm(mic_locations):
+    """
+    This method builds the Euclidean Distance Matrix using
+    the relative positions between the microphones
+    :param mic_locations: contains the x, y, z vectors of all the microphones
+    :return: EDM matrix based on the distance between microphones
+    """
+    # Determine the dimensions of the input matrix
+    m, n = mic_locations.shape
+
+    # Initializing squared EDM
+    D = np.zeros((n, n))
+    for i in range(n):
+        for j in range(i + 1, n):
+            D[i, j] = np.linalg.norm(mic_locations[:, i] - mic_locations[:, j]) ** 2
+            D[j, i] = D[i, j]
+    return D
+
+
 def echo_sorting(edm, mic_peaks, k, diameter, fs, global_delay, alpha=0.0,  c=343.0):
     """
     This method evaluates if the matrix Daug, generated adding a row and
@@ -105,3 +124,41 @@ def echo_sorting(edm, mic_peaks, k, diameter, fs, global_delay, alpha=0.0,  c=34
             sorted_echoes.append((score_best, d_best))
 
     return sorted_echoes
+
+
+def trilateration(mic_locations, distances):
+    """
+    This method uses a Trilateration algorithm to infer the position
+    of the virtual source corresponding to a set of measured echoes
+    using the location of the microphones and the distance between each
+    microphone and the virtual source (estimated from the RIRs).
+    :param mic_locations: contains the x, y, z vectors of all the microphones
+    :param distances: contains the distances between each microphone
+    and the virtual source to be estimated
+    :return: the x, y, z coordinates of the virtual source
+    """
+    # Trilateration using a Linearized System of Equations:
+    # Conventionally, we use the first mic as a reference point
+    reference_mic = mic_locations[:, 0]
+
+    # Instantiating the A matrix, which has a number of rows = n_mics - 1
+    # and a number of columns = n_dimensions
+    A = np.zeros(shape=(mic_locations.shape[1] - 1, len(mic_locations)))
+
+    # Building the A matrix
+    for i in range(len(reference_mic)):
+        for j in range(mic_locations.shape[1] - 1):
+            A[j, i] = mic_locations[i, j + 1] - reference_mic[i]
+
+    # Instantiating the b vector, which has dimension = n_mics - 1
+    b = np.zeros(mic_locations.shape[1] - 1)
+
+    # Building the b vector
+    for i in range(mic_locations.shape[1] - 1):
+        b[i] = 0.5 * (distances[0] ** 2 - distances[i + 1] ** 2 +
+                      np.linalg.norm(mic_locations[:, i + 1] - reference_mic) ** 2)
+
+    # Solving the linear system through the Linear Least Squares (Moore-Penrose Pseudo-inverse) approach
+    virtual_source_loc = np.linalg.pinv(A).dot(b) + reference_mic
+
+    return virtual_source_loc
