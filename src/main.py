@@ -5,8 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import load_save as ls
 
-NUM_ECHOES = 15
-MAX_ORDER = 2
 DIST_THRESH = 1e-1
 
 if __name__ == '__main__':
@@ -23,7 +21,10 @@ if __name__ == '__main__':
             mic_array = [list(map(float, lst)) for lst in room_data['mic_array']]
             loudspeaker = list(map(float, room_data['source']))
             fs = int(room_data['fs'])
-            room, global_delay = room_methods.build_room(dimensions, loudspeaker, mic_array, rt60, fs, MAX_ORDER)
+            num_echoes = int(room_data['n_echoes'])
+            alpha = float(room_data['alpha'])
+            max_order = int(room_data['max_order'])
+            room, global_delay = room_methods.build_room(dimensions, loudspeaker, mic_array, rt60, fs, max_order)
 
         except Exception as e:
             print(e)
@@ -36,7 +37,7 @@ if __name__ == '__main__':
 
                 edm = echoes_methods.build_edm(np.array(mic_array))
 
-                peaks = peaks_methods.find_echoes(room.rir, n=NUM_ECHOES).astype(int)
+                peaks = peaks_methods.find_echoes(room.rir, n=num_echoes).astype(int)
 
                 # Printing the RIR with the identified peaks.
                 rir1 = room.rir[1][0]
@@ -48,7 +49,7 @@ if __name__ == '__main__':
                 inter_mic_max_distance = np.sqrt(np.max(edm))
 
                 echoes = echoes_methods.echo_sorting(edm, np.array(peaks, dtype=float), len(dimensions),
-                                                     inter_mic_max_distance, fs, global_delay)
+                                                     inter_mic_max_distance, fs, global_delay, alpha=alpha)
 
                 number_of_microphones = np.array(mic_array).shape[1]
                 csv_file_name = user_input + '.csv'

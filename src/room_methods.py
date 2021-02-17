@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # noinspection PyDeprecation
 
 
-def build_room(dimensions, source, mic_array, rt60, fs, max_order):
+def build_room(dimensions, source, mic_array, rt60, fs, max_order_user):
     """
     This method wraps inside all the necessary steps
     to build the simulated room
@@ -17,13 +17,16 @@ def build_room(dimensions, source, mic_array, rt60, fs, max_order):
     :param mic_array: contains the x, y, z vectors of all the microphones
     :param float rt60: represents the reverberation time of the room
     :param int fs: represents the sampling frequency used for the generation of signals
-    :param int max_order: represents the maximum order of the simulated reflections
+    :param int max_order_user: represents the maximum order of the simulated reflections
     :return: pyroomacoustics object representing the room and the fractional delay to compensate
     """
     # We invert Sabine's formula to obtain the parameters for the ISM simulator
-    e_absorption, _ = pra.inverse_sabine(rt60, dimensions)
+    e_absorption, max_order = pra.inverse_sabine(rt60, dimensions)
 
     # Building a 'Shoebox' room with the provided dimensions
+    if max_order_user != 0:
+        max_order = max_order_user
+
     room = pra.ShoeBox(p=dimensions, fs=fs, absorption=e_absorption, max_order=max_order)
 
     # Place the Microphone Array and the Sound Source inside the room
